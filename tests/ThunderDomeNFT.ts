@@ -9,9 +9,8 @@ import { ThunderDomeNFT } from "../typechain-types/contracts";
 const name = "ThunderDomeNFT";
 const symbol = "TDT";
 
-const uri = "1234";
-const firstTokenId = "0";
-const secondTokenId = "1";
+const firstTokenId = 0;
+const secondTokenId = 1;
 
 describe("thunderDomeNFT", function () {
   let thunderDomeNFT: ThunderDomeNFT,
@@ -44,8 +43,8 @@ describe("thunderDomeNFT", function () {
       expect(await thunderDomeNFT.balanceOf(owner.address)).to.equal(0);
     });
     it("should return correct balanceOf after minting tokens", async function () {
-      await thunderDomeNFT.safeMint(owner.address, firstTokenId);
-      await thunderDomeNFT.safeMint(owner.address, secondTokenId);
+      await thunderDomeNFT.safeMint(owner.address);
+      await thunderDomeNFT.safeMint(owner.address);
 
       expect(await thunderDomeNFT.balanceOf(owner.address)).to.equal(2);
     });
@@ -59,7 +58,7 @@ describe("thunderDomeNFT", function () {
 
   describe("Owner", function () {
     it("returns the tokenId owner", async function () {
-      await thunderDomeNFT.safeMint(addr1.address, firstTokenId);
+      await thunderDomeNFT.safeMint(addr1.address);
 
       expect(await thunderDomeNFT.ownerOf(firstTokenId)).to.equal(
         addr1.address
@@ -67,7 +66,7 @@ describe("thunderDomeNFT", function () {
     });
 
     it("reverts an error when tokenId is invalid/untracked", async function () {
-      await thunderDomeNFT.safeMint(addr1.address, firstTokenId);
+      await thunderDomeNFT.safeMint(addr1.address);
 
       await expect(thunderDomeNFT.ownerOf(secondTokenId)).to.be.revertedWith(
         "ERC721: invalid token ID"
@@ -77,8 +76,8 @@ describe("thunderDomeNFT", function () {
 
   describe("approvals", async () => {
     beforeEach(async () => {
-      await thunderDomeNFT.safeMint(owner.address, firstTokenId);
-      await thunderDomeNFT.safeMint(owner.address, secondTokenId);
+      await thunderDomeNFT.safeMint(owner.address);
+      await thunderDomeNFT.safeMint(owner.address);
     });
 
     it("has no token prior approvals", async () => {
@@ -132,8 +131,8 @@ describe("thunderDomeNFT", function () {
 
   describe("transfers", async () => {
     beforeEach(async () => {
-      await thunderDomeNFT.safeMint(owner.address, firstTokenId);
-      await thunderDomeNFT.safeMint(owner.address, secondTokenId);
+      await thunderDomeNFT.safeMint(owner.address);
+      await thunderDomeNFT.safeMint(owner.address);
 
       await thunderDomeNFT.approve(addr1.address, firstTokenId);
       await thunderDomeNFT.setApprovalForAll(thunderDomeNFT.address, true, {
