@@ -1,5 +1,14 @@
 {
-  "name": "hardhat-project",
+  "name": "thunderdome-contracts",
+  "scripts": {
+    "test": "npx hardhat test",
+    "testParallel": "npx hardhat test --parallel",
+    "coverage": "npx hardhat coverage",
+    "reportGas": "REPORT_GAS=true npx hardhat test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
     "hardhat": "^2.12.0"
