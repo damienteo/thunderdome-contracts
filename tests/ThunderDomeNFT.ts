@@ -8,6 +8,7 @@ import { ThunderDomeNFT } from "../typechain-types/contracts";
 
 const name = "ThunderDomeNFT";
 const symbol = "TDT";
+const url = "https://jsonkeeper.com/b/DST0";
 
 const firstTokenId = 0;
 const secondTokenId = 1;
@@ -42,9 +43,10 @@ describe("thunderDomeNFT", function () {
     it("should return balance of 0 if no tokens had been minted", async function () {
       expect(await thunderDomeNFT.balanceOf(owner.address)).to.equal(0);
     });
+
     it("should return correct balanceOf after minting tokens", async function () {
-      await thunderDomeNFT.safeMint(owner.address);
-      await thunderDomeNFT.safeMint(owner.address);
+      await thunderDomeNFT.safeMint(owner.address, url);
+      await thunderDomeNFT.safeMint(owner.address, url);
 
       expect(await thunderDomeNFT.balanceOf(owner.address)).to.equal(2);
     });
@@ -54,11 +56,17 @@ describe("thunderDomeNFT", function () {
         "ERC721: address zero is not a valid owner"
       );
     });
+
+    it("should return the correct uri", async function () {
+      await thunderDomeNFT.safeMint(owner.address, url);
+
+      expect(await thunderDomeNFT.tokenURI(firstTokenId)).to.equal(url);
+    });
   });
 
   describe("Owner", function () {
     it("returns the tokenId owner", async function () {
-      await thunderDomeNFT.safeMint(addr1.address);
+      await thunderDomeNFT.safeMint(addr1.address, url);
 
       expect(await thunderDomeNFT.ownerOf(firstTokenId)).to.equal(
         addr1.address
@@ -66,7 +74,7 @@ describe("thunderDomeNFT", function () {
     });
 
     it("reverts an error when tokenId is invalid/untracked", async function () {
-      await thunderDomeNFT.safeMint(addr1.address);
+      await thunderDomeNFT.safeMint(addr1.address, url);
 
       await expect(thunderDomeNFT.ownerOf(secondTokenId)).to.be.revertedWith(
         "ERC721: invalid token ID"
@@ -76,8 +84,8 @@ describe("thunderDomeNFT", function () {
 
   describe("approvals", async () => {
     beforeEach(async () => {
-      await thunderDomeNFT.safeMint(owner.address);
-      await thunderDomeNFT.safeMint(owner.address);
+      await thunderDomeNFT.safeMint(owner.address, url);
+      await thunderDomeNFT.safeMint(owner.address, url);
     });
 
     it("has no token prior approvals", async () => {
@@ -131,8 +139,8 @@ describe("thunderDomeNFT", function () {
 
   describe("transfers", async () => {
     beforeEach(async () => {
-      await thunderDomeNFT.safeMint(owner.address);
-      await thunderDomeNFT.safeMint(owner.address);
+      await thunderDomeNFT.safeMint(owner.address, url);
+      await thunderDomeNFT.safeMint(owner.address, url);
 
       await thunderDomeNFT.approve(addr1.address, firstTokenId);
       await thunderDomeNFT.setApprovalForAll(thunderDomeNFT.address, true, {
