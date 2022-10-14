@@ -8,7 +8,7 @@ import { ThunderDomeNFT } from "../typechain-types/contracts";
 
 const name = "ThunderDomeNFT";
 const symbol = "TDT";
-const url = "https://jsonkeeper.com/b/DST0";
+export const url = "https://jsonkeeper.com/b/DST0";
 
 const firstTokenId = 0;
 const secondTokenId = 1;
