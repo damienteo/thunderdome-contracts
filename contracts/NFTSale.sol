@@ -22,7 +22,7 @@ contract NFTSale is Ownable, ReentrancyGuard {
     function purchaseNFT(uint256 tokenId) public payable nonReentrant {
         uint256 etherReceived = msg.value;
 
-        require(etherReceived > nftPrice);
+        require(etherReceived >= nftPrice, "Insufficient value sent");
 
         adminPool += etherReceived;
 
