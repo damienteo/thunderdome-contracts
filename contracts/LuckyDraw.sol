@@ -9,13 +9,15 @@ contract LuckyDraw {
     address[] public players;
     address public winner;
     ThunderDomeNFT public NFTContract;
+    uint256 public prizeTokenId;
 
     event NewChallenger(address user);
     event WinnerPicked(address user);
 
-    constructor(address _NFTContract) {
+    constructor(address _NFTContract, uint256 _prizeTokenId) {
         manager = msg.sender;
         NFTContract = ThunderDomeNFT(_NFTContract);
+        prizeTokenId = _prizeTokenId;
     }
 
     function enter() public {
@@ -48,6 +50,8 @@ contract LuckyDraw {
         winner = players[index];
 
         players = new address[](0);
+
+        NFTContract.transferFrom(address(this), winner, prizeTokenId);
 
         emit WinnerPicked(winner);
     }
