@@ -4,9 +4,10 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "./ThunderDomeNFT.sol";
 
-contract NFTSale is Ownable, ReentrancyGuard {
+contract NFTSale is Ownable, ReentrancyGuard, IERC721Receiver {
     uint256 public nftPrice;
     ThunderDomeNFT public NFTContract;
     uint256 public adminPool;
@@ -39,5 +40,14 @@ contract NFTSale is Ownable, ReentrancyGuard {
         require(success, "Failed to withdraw money from contract");
 
         emit Withdrawn(msg.sender, amount);
+    }
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
     }
 }
