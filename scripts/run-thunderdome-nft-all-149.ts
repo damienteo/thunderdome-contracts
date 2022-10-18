@@ -26,18 +26,11 @@ async function runThunderDomeNFT() {
 
   nextArray.splice(-2, 2); // don't mint mew and mewtwo
 
-  for (const element of nextArray) {
-    const url = `${NFT_BACKEND}/${element.name}`;
-    const tx = await thunderdomeNFTContract.safeMint(NFT_SALE_ADDRESS, url);
-
-    await tx.wait();
-  }
-
   const mint = async () => {
     for (const element of nextArray) {
       const url = `${NFT_BACKEND}/${element.name}`;
       const tx = await thunderdomeNFTContract.safeMint(NFT_SALE_ADDRESS, url);
-
+      console.log("mint");
       await tx.wait();
     }
   };

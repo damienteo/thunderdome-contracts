@@ -3,9 +3,9 @@ import { ethers } from "hardhat";
 async function deployThunderDomeNFT() {
   const ThunderDomeNFT = await ethers.getContractFactory("ThunderDomeNFT");
 
-  const basic721Token = await ThunderDomeNFT.deploy();
+  const thunderDomeNFT = await ThunderDomeNFT.deploy();
 
-  console.log(`Contract deployed to ${basic721Token.address}`);
+  console.log(`Contract deployed to ${thunderDomeNFT.address}`);
 }
 
 deployThunderDomeNFT()
