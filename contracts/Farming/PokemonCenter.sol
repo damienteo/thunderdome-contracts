@@ -8,6 +8,8 @@ import "../ThunderDomeNFT.sol";
 import "hardhat/console.sol";
 
 contract PokemonCenter {
+    address public owner;
+
     mapping(address => uint256[]) public depositedPokemon;
     mapping(address => bool) public isDeposited;
     mapping(address => uint256) public startBlockNumber;
@@ -21,6 +23,7 @@ contract PokemonCenter {
     event YieldWithdrawal(address indexed to, uint256 amount);
 
     constructor(PokePoint _pokePoint, ThunderDomeNFT _pokemon) {
+        owner = msg.sender;
         pokePoint = _pokePoint;
         pokemon = _pokemon;
     }
@@ -160,5 +163,10 @@ contract PokemonCenter {
         returns (uint256 rawYield)
     {
         return calculateYieldBlocks(_user) * 200 * getNumberOfDeposits(_user); // 200 tokens a block per pokemon deposited
+    }
+
+    function returnPokePointsOwnership() public {
+        require(msg.sender == owner, "Only owner can call this");
+        pokePoint.transferOwnership(owner);
     }
 }
