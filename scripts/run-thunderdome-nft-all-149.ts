@@ -5,6 +5,7 @@ import hre from "hardhat";
 import { POKEMON_URLS } from "../constants/constants";
 
 const {
+  PRIVATE_KEY = "",
   LOCAL_PRIVATE_KEY = "",
   THUNDERDOME_NFT_ADDRESS = "",
   NFT_SALE_ADDRESS = "",
@@ -29,8 +30,9 @@ async function runThunderDomeNFT() {
   const mint = async () => {
     for (const element of nextArray) {
       const url = `${NFT_BACKEND}/${element.name}`;
+
       const tx = await thunderdomeNFTContract.safeMint(NFT_SALE_ADDRESS, url);
-      console.log("mint");
+
       await tx.wait();
     }
   };
