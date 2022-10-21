@@ -7,6 +7,7 @@ async function deployPokemonCenter() {
   const PokemonCenter = await ethers.getContractFactory("PokemonCenter");
 
   const pokePoint = await PokePoint.deploy();
+  await pokePoint.deployed();
 
   console.log(`PokePoint Contract deployed to ${pokePoint.address}`);
 
@@ -14,6 +15,7 @@ async function deployPokemonCenter() {
     pokePoint.address,
     THUNDERDOME_NFT_ADDRESS
   );
+  await pokemonCenter.deployed();
 
   console.log(`Pokemon Center Contract deployed to ${pokemonCenter.address}`);
 }

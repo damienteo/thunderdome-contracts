@@ -3,13 +3,14 @@ import "@nomicfoundation/hardhat-toolbox";
 
 require("dotenv").config();
 
-const { STAGING_QUICKNODE_KEY, PRIVATE_KEY, ETHERSCAN_API } = process.env;
+const { STAGING_QUICKNODE_KEY, INFURA_API, PRIVATE_KEY, ETHERSCAN_API } =
+  process.env;
 
 const config: HardhatUserConfig = {
   solidity: "0.8.17",
   networks: {
     goerli: {
-      url: STAGING_QUICKNODE_KEY,
+      url: INFURA_API,
       accounts: [PRIVATE_KEY || ""],
     },
   },
