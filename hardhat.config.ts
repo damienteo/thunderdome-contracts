@@ -8,6 +8,7 @@ const { STAGING_QUICKNODE_KEY, INFURA_API, PRIVATE_KEY, ETHERSCAN_API } =
 
 const config: HardhatUserConfig = {
   solidity: "0.8.17",
+  defaultNetwork: "localhost",
   networks: {
     goerli: {
       url: INFURA_API,
