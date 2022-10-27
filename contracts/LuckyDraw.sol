@@ -3,8 +3,9 @@
 pragma solidity ^0.8.4;
 
 import "./ThunderDomeNFT.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-contract LuckyDraw {
+contract LuckyDraw is IERC721Receiver {
     address public manager;
     address[] public players;
     address public winner;
@@ -58,5 +59,18 @@ contract LuckyDraw {
 
     function getPlayers() public view returns (address[] memory) {
         return players;
+    }
+
+    function getNumberOfPlayers() public view returns (uint256) {
+        return players.length;
+    }
+
+    function onERC721Received(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external pure returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
     }
 }

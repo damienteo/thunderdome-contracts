@@ -7,6 +7,7 @@ const {
   THUNDERDOME_NFT_ADDRESS = "",
   NFT_SALE_ADDRESS = "",
   NFT_BACKEND = "",
+  LUCKY_DRAW_ADDRESS = "",
 } = process.env;
 
 async function runThunderDomeNFT() {
@@ -20,17 +21,14 @@ async function runThunderDomeNFT() {
     signer
   );
 
+  console.log({ LUCKY_DRAW_ADDRESS });
+
   const tx = await thunderdomeNFTContract.safeMint(
-    NFT_SALE_ADDRESS,
-    `${NFT_BACKEND}/charmander`
+    LUCKY_DRAW_ADDRESS,
+    `${NFT_BACKEND}/mew`
   );
 
-  const receipt = await tx.wait();
-
-  console.log({ receipt: receipt.events });
-
-  const uri = await thunderdomeNFTContract.tokenURI(32);
-  console.log({ uri });
+  await tx.wait();
 }
 
 runThunderDomeNFT()
