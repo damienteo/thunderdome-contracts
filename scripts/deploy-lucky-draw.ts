@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 
 const { THUNDERDOME_NFT_ADDRESS } = process.env;
 
-const CURRENT_PRIZE_TOKEN_ID = 454;
+const CURRENT_PRIZE_TOKEN_ID = 336;
 
 async function deployLuckyDraw() {
   const LuckyDraw = await ethers.getContractFactory("LuckyDraw");

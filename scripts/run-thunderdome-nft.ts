@@ -4,6 +4,7 @@ import hre from "hardhat";
 
 const {
   LOCAL_PRIVATE_KEY = "",
+  PRIVATE_KEY = "",
   THUNDERDOME_NFT_ADDRESS = "",
   NFT_SALE_ADDRESS = "",
   NFT_BACKEND = "",
@@ -13,7 +14,7 @@ const {
 async function runThunderDomeNFT() {
   const contract = require("../artifacts/contracts/ThunderDomeNFT.sol/ThunderDomeNFT.json");
   const provider = hre.ethers.provider;
-  const signer = new ethers.Wallet(LOCAL_PRIVATE_KEY, provider);
+  const signer = new ethers.Wallet(PRIVATE_KEY, provider);
 
   const thunderdomeNFTContract = new ethers.Contract(
     THUNDERDOME_NFT_ADDRESS,
