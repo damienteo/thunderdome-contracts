@@ -39,6 +39,8 @@ contract MarketPlace is Ownable, ReentrancyGuard {
     function makeListing(uint256 tokenId, uint256 price) public {
         require(price > commission, "The listing price is too low");
 
+        NFTContract.transferFrom(msg.sender, address(this), tokenId);
+
         listings[tokenId].seller = msg.sender;
         listings[tokenId].listingPrice = price;
 
@@ -46,8 +48,14 @@ contract MarketPlace is Ownable, ReentrancyGuard {
     }
 
     function withdrawListing(uint256 tokenId) public nonReentrant {
+        require(
+            listings[tokenId].seller == msg.sender,
+            "Only seller can withdraw the listing"
+        );
+
         listings[tokenId].seller = address(0);
-        NFTContract.approve(msg.sender, tokenId);
+
+        NFTContract.transferFrom(address(this), msg.sender, tokenId);
 
         uint256 refundAmount = listings[tokenId].buyerDeposit;
 

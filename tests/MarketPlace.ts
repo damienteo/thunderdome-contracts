@@ -5,11 +5,14 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { url } from "./ThunderDomeNFT";
 
 import { MarketPlace, ThunderDomeNFT } from "../typechain-types/contracts";
+import { ZERO_ADDRESS } from "../constants/constants";
 
 const COMMISSION = 5;
 const TOKEN_ID = 0;
 
 const WITHDRAWN_AMOUNT = 1;
+
+const nextListingPrice = COMMISSION + 1;
 
 describe("MarketPlace", () => {
   let thunderDomeNFT: ThunderDomeNFT,
@@ -29,8 +32,7 @@ describe("MarketPlace", () => {
 
     [owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
-    await thunderDomeNFT.safeMint(owner.address, url);
-    await thunderDomeNFT.safeMint(owner.address, url);
+    await thunderDomeNFT.safeMint(addr1.address, url);
 
     return {
       marketPlace,
@@ -58,12 +60,35 @@ describe("MarketPlace", () => {
   });
 
   describe("Make Listing", async () => {
-    beforeEach(async () => [
-      thunderDomeNFT.connect(addr1).approve(marketPlace.address, TOKEN_ID),
-    ]);
+    beforeEach(async () => {
+      await thunderDomeNFT
+        .connect(addr1)
+        .approve(marketPlace.address, TOKEN_ID);
+    });
 
     it("allows the user to make a listing for their NFT", async () => {
-      await marketPlace.connect(addr1).makeListing(TOKEN_ID, COMMISSION + 1);
+      await expect(
+        marketPlace.connect(addr1).makeListing(TOKEN_ID, nextListingPrice)
+      ).not.to.be.reverted;
+
+      const listing = await marketPlace.listings(TOKEN_ID);
+
+      expect(listing.seller).to.equal(addr1.address);
+      expect(listing.buyer).to.equal(ZERO_ADDRESS);
+      expect(listing.listingPrice).to.equal(nextListingPrice);
+      expect(listing.buyerDeposit).to.equal(0);
+
+      expect(await thunderDomeNFT.ownerOf(TOKEN_ID)).to.equal(
+        marketPlace.address
+      );
+    });
+
+    it("emits a ListingMade event upon listing", async () => {
+      await expect(
+        marketPlace.connect(addr1).makeListing(TOKEN_ID, nextListingPrice)
+      )
+        .to.emit(marketPlace, "ListingMade")
+        .withArgs(addr1.address, TOKEN_ID, nextListingPrice);
     });
 
     it("reverts if price offer is equal to commission", async () => {
@@ -76,6 +101,38 @@ describe("MarketPlace", () => {
       await expect(
         marketPlace.connect(addr1).makeListing(TOKEN_ID, COMMISSION - 1)
       ).to.be.revertedWith("The listing price is too low");
+    });
+  });
+
+  describe("Withdraw Listing", async () => {
+    beforeEach(async () => {
+      await thunderDomeNFT
+        .connect(addr1)
+        .approve(marketPlace.address, TOKEN_ID);
+      await marketPlace.connect(addr1).makeListing(TOKEN_ID, nextListingPrice);
+    });
+
+    it("allows the user to withdraw the listing for their NFT", async () => {
+      await marketPlace.connect(addr1).withdrawListing(TOKEN_ID);
+
+      expect(await thunderDomeNFT.ownerOf(TOKEN_ID)).to.equal(addr1.address);
+
+      const listing = await marketPlace.listings(TOKEN_ID);
+
+      expect(listing.seller).to.equal(ZERO_ADDRESS);
+      expect(listing.buyer).to.equal(ZERO_ADDRESS);
+    });
+
+    it("emits a ListingWithdrawn event upon withdrawal of the listing", async () => {
+      await expect(marketPlace.connect(addr1).withdrawListing(TOKEN_ID))
+        .to.emit(marketPlace, "ListingWithdrawn")
+        .withArgs(addr1.address, TOKEN_ID);
+    });
+
+    it("reverts if person making the withdrawal is not the person who made the listing", async () => {
+      await expect(marketPlace.withdrawListing(TOKEN_ID)).to.be.revertedWith(
+        "Only seller can withdraw the listing"
+      );
     });
   });
 });
