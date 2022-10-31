@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./ThunderDomeNFT.sol";
 
-contract Escrow is Ownable, ReentrancyGuard {
+contract MarketPlace is Ownable, ReentrancyGuard {
     struct Listing {
         address seller;
         uint256 listingPrice;
@@ -39,7 +39,6 @@ contract Escrow is Ownable, ReentrancyGuard {
     function makeListing(uint256 tokenId, uint256 price) public {
         require(price > commission, "The listing price is too low");
 
-        NFTContract.approve(address(this), tokenId); // should be done separately
         listings[tokenId].seller = msg.sender;
         listings[tokenId].listingPrice = price;
 
