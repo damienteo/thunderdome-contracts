@@ -164,19 +164,6 @@ describe("MarketPlace", () => {
       expect(listing.buyerDeposit).to.equal(nextListingPrice + 1);
     });
 
-    it("allows the user to withdraw their bid for the listing", async () => {
-      await marketPlace.connect(addr2).bid(TOKEN_ID, {
-        value: nextListingPrice,
-      });
-
-      await expect(marketPlace.connect(addr2).withdrawBid(TOKEN_ID)).not.to.be
-        .reverted;
-
-      const listing = await marketPlace.listings(TOKEN_ID);
-      expect(listing.buyer).to.equal(ZERO_ADDRESS);
-      expect(listing.buyerDeposit).to.equal(0);
-    });
-
     it("accepts the right amount of eth from the buyer", async () => {
       const prevBalance = await addr2.getBalance();
 
@@ -196,6 +183,16 @@ describe("MarketPlace", () => {
       expect(diff).to.be.equal(gasCost.add(nextListingPrice));
     });
 
+    it("emits a BuyerDeposited event upon buyer bid and deposit", async () => {
+      await expect(
+        marketPlace.connect(addr2).bid(TOKEN_ID, {
+          value: nextListingPrice,
+        })
+      )
+        .to.emit(marketPlace, "BuyerDeposited")
+        .withArgs(TOKEN_ID, addr2.address, nextListingPrice);
+    });
+
     it("returns the right amount of eth to the buyer if listing is withdrawn before acceptance", async () => {
       await marketPlace.connect(addr2).bid(TOKEN_ID, {
         value: nextListingPrice,
@@ -210,16 +207,6 @@ describe("MarketPlace", () => {
       const diff = nextBalance.sub(prevBalance);
 
       expect(diff).to.be.equal(nextListingPrice);
-    });
-
-    it("emits a BuyerDeposited event upon withdrawal of the listing", async () => {
-      await expect(
-        marketPlace.connect(addr2).bid(TOKEN_ID, {
-          value: nextListingPrice,
-        })
-      )
-        .to.emit(marketPlace, "BuyerDeposited")
-        .withArgs(TOKEN_ID, addr2.address, nextListingPrice);
     });
 
     it("reverts if user bid is less than offering price", async () => {
@@ -248,6 +235,61 @@ describe("MarketPlace", () => {
           value: nextListingPrice,
         })
       ).to.be.revertedWith("An offer has already been made for this listing");
+    });
+  });
+
+  describe("Withdrawing Bid", async () => {
+    beforeEach(async () => {
+      await thunderDomeNFT
+        .connect(addr1)
+        .approve(marketPlace.address, TOKEN_ID);
+
+      await marketPlace.connect(addr1).makeListing(TOKEN_ID, nextListingPrice);
+
+      await marketPlace.connect(addr2).bid(TOKEN_ID, {
+        value: nextListingPrice,
+      });
+    });
+
+    it("allows the user to withdraw their bid for the listing", async () => {
+      await expect(marketPlace.connect(addr2).withdrawBid(TOKEN_ID)).not.to.be
+        .reverted;
+
+      const listing = await marketPlace.listings(TOKEN_ID);
+      expect(listing.buyer).to.equal(ZERO_ADDRESS);
+      expect(listing.buyerDeposit).to.equal(0);
+    });
+
+    it("returns the right amount of eth to the buyer if user withdraws bid", async () => {
+      const prevBalance = await addr2.getBalance();
+
+      const withdrawalTxn = await marketPlace
+        .connect(addr2)
+        .withdrawBid(TOKEN_ID);
+
+      const withdrawalTxnReceipt = await withdrawalTxn.wait();
+
+      const gasUnitsUsed = withdrawalTxnReceipt.gasUsed;
+      const gasPrice = withdrawalTxnReceipt.effectiveGasPrice;
+      const gasCost = gasUnitsUsed.mul(gasPrice);
+
+      const nextBalance = await addr2.getBalance();
+
+      expect(nextBalance).to.be.equal(
+        prevBalance.add(nextListingPrice).sub(gasCost)
+      );
+    });
+
+    it("emits a BuyerWithdrawn event upon buyer bid and deposit", async () => {
+      await expect(marketPlace.connect(addr2).withdrawBid(TOKEN_ID))
+        .to.emit(marketPlace, "BuyerWithdrawn")
+        .withArgs(TOKEN_ID, nextListingPrice);
+    });
+
+    it("does not allow withdrawal of bid if called by someone other than the potential buyer", async () => {
+      await expect(
+        marketPlace.connect(addr3).withdrawBid(TOKEN_ID)
+      ).to.be.revertedWith("You are not the owner");
     });
   });
 });
