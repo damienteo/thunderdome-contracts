@@ -33,6 +33,7 @@ describe("MarketPlace", () => {
     [owner, addr1, addr2, addr3, addr4] = await ethers.getSigners();
 
     await thunderDomeNFT.safeMint(addr1.address, url);
+    await thunderDomeNFT.safeMint(addr1.address, url);
 
     return {
       marketPlace,
@@ -290,6 +291,105 @@ describe("MarketPlace", () => {
       await expect(
         marketPlace.connect(addr3).withdrawBid(TOKEN_ID)
       ).to.be.revertedWith("You are not the owner");
+    });
+  });
+
+  describe("Accepting bid", async () => {
+    beforeEach(async () => {
+      await thunderDomeNFT
+        .connect(addr1)
+        .approve(marketPlace.address, TOKEN_ID);
+
+      await marketPlace.connect(addr1).makeListing(TOKEN_ID, nextListingPrice);
+
+      await marketPlace.connect(addr2).bid(TOKEN_ID, {
+        value: nextListingPrice,
+      });
+    });
+
+    describe("Acceptance of bid updates values accordingly", () => {
+      beforeEach(async () => {
+        await expect(marketPlace.connect(addr1).acceptOffer(TOKEN_ID)).not.to.be
+          .reverted;
+      });
+
+      it("updates the listing after the user accepts the bid", async () => {
+        const listing = await marketPlace.listings(TOKEN_ID);
+        expect(listing.seller).to.equal(ZERO_ADDRESS);
+        expect(listing.listingPrice).to.equal(0);
+        expect(listing.buyer).to.equal(ZERO_ADDRESS);
+        expect(listing.buyerDeposit).to.equal(0);
+      });
+
+      it("sends the token to the correct address", async () => {
+        expect(await thunderDomeNFT.ownerOf(TOKEN_ID)).to.equal(addr2.address);
+      });
+
+      it("updates the adminPool correctly", async () => {
+        expect(await marketPlace.adminPool()).to.equal(COMMISSION);
+      });
+    });
+
+    it("returns the right amount of eth to the seller when seller accepts bid", async () => {
+      const prevBalance = await addr1.getBalance();
+
+      const withdrawalTxn = await marketPlace
+        .connect(addr1)
+        .acceptOffer(TOKEN_ID);
+
+      const withdrawalTxnReceipt = await withdrawalTxn.wait();
+
+      const gasUnitsUsed = withdrawalTxnReceipt.gasUsed;
+      const gasPrice = withdrawalTxnReceipt.effectiveGasPrice;
+      const gasCost = gasUnitsUsed.mul(gasPrice);
+
+      const nextBalance = await addr1.getBalance();
+
+      const profit = nextListingPrice - COMMISSION;
+
+      expect(nextBalance).to.be.equal(prevBalance.add(profit).sub(gasCost));
+    });
+
+    it("retains the right amount of eth in the contract as commission when seller accepts bid", async () => {
+      const prevBalance = await ethers.provider.getBalance(marketPlace.address);
+      const prevListing = await marketPlace.listings(TOKEN_ID);
+      const prevDeposit = prevListing.buyerDeposit;
+
+      expect(prevBalance).to.be.equal(prevDeposit);
+
+      await marketPlace.connect(addr1).acceptOffer(TOKEN_ID);
+
+      const nextBalance = await ethers.provider.getBalance(marketPlace.address);
+
+      expect(nextBalance).to.be.equal(COMMISSION);
+    });
+
+    it("emits a ListingAccepted event upon seller acceptance", async () => {
+      await expect(marketPlace.connect(addr1).acceptOffer(TOKEN_ID))
+        .to.emit(marketPlace, "ListingAccepted")
+        .withArgs(TOKEN_ID);
+    });
+
+    it("does not allow acceptance of bid if called by someone other than the seller", async () => {
+      await expect(
+        marketPlace.connect(addr3).acceptOffer(TOKEN_ID)
+      ).to.be.revertedWith("You are not the owner");
+    });
+
+    it("does not allow acceptance of bid if there is no buyer", async () => {
+      const nextTokenId = TOKEN_ID + 1;
+
+      await thunderDomeNFT
+        .connect(addr1)
+        .approve(marketPlace.address, nextTokenId);
+
+      await marketPlace
+        .connect(addr1)
+        .makeListing(nextTokenId, nextListingPrice);
+
+      await expect(
+        marketPlace.connect(addr1).acceptOffer(nextTokenId)
+      ).to.be.revertedWith("An offer has not been made");
     });
   });
 });

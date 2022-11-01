@@ -22,7 +22,7 @@ contract MarketPlace is Ownable, ReentrancyGuard {
 
     event ListingMade(address seller, uint256 tokenId, uint256 listingPrice);
     event ListingWithdrawn(address seller, uint256 tokenId);
-    event Approved(uint256 tokenId, bool shopAproval);
+    event ListingAccepted(uint256 tokenId);
     event BuyerDeposited(uint256 tokenId, address buyer, uint256 depositAmount);
     event BuyerWithdrawn(uint256 tokenId, uint256 amount);
 
@@ -100,14 +100,17 @@ contract MarketPlace is Ownable, ReentrancyGuard {
     }
 
     function acceptOffer(uint256 tokenId) public nonReentrant {
-        require(listings[tokenId].buyer == msg.sender, "You are not the owner");
+        require(
+            listings[tokenId].seller == msg.sender,
+            "You are not the owner"
+        );
         require(
             listings[tokenId].buyer != address(0),
             "An offer has not been made"
         );
 
         address seller = listings[tokenId].seller;
-        uint256 transferAmount = listings[tokenId].buyerDeposit;
+        uint256 transferAmount = listings[tokenId].buyerDeposit - commission;
         address buyer = listings[tokenId].buyer;
 
         listings[tokenId].seller = address(0);
@@ -115,18 +118,19 @@ contract MarketPlace is Ownable, ReentrancyGuard {
         listings[tokenId].buyer = address(0);
         listings[tokenId].buyerDeposit = 0;
 
-        NFTContract.transferFrom(seller, buyer, tokenId);
+        NFTContract.transferFrom(address(this), buyer, tokenId);
 
         (bool paymentSuccess, ) = (seller).call{value: transferAmount}("");
         require(paymentSuccess, "Failed to send money to seller");
 
-        (bool commissionSuccess, ) = (address(this)).call{value: commission}(
-            ""
-        );
-        require(
-            commissionSuccess,
-            "Failed to send commission to contract owner"
-        );
         adminPool += commission;
+
+        emit ListingAccepted(tokenId);
+    }
+
+    function withdrawAdminPool(uint256 amount) public onlyOwner {
+        (bool success, ) = (address(this)).call{value: amount}("");
+        require(success, "Failed to send commission to contract owner");
+        adminPool -= amount;
     }
 }
