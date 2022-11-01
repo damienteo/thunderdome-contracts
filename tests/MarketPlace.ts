@@ -135,4 +135,119 @@ describe("MarketPlace", () => {
       );
     });
   });
+
+  describe("Bidding for Listing", async () => {
+    beforeEach(async () => {
+      await thunderDomeNFT
+        .connect(addr1)
+        .approve(marketPlace.address, TOKEN_ID);
+      await marketPlace.connect(addr1).makeListing(TOKEN_ID, nextListingPrice);
+    });
+
+    it("allows the user to bid for the listing", async () => {
+      await marketPlace.connect(addr2).bid(TOKEN_ID, {
+        value: nextListingPrice,
+      });
+
+      const listing = await marketPlace.listings(TOKEN_ID);
+      expect(listing.buyer).to.equal(addr2.address);
+      expect(listing.buyerDeposit).to.equal(nextListingPrice);
+    });
+
+    it("allows the user to bid for the listing with a deposit that is more than offer price", async () => {
+      await marketPlace.connect(addr2).bid(TOKEN_ID, {
+        value: nextListingPrice + 1,
+      });
+
+      const listing = await marketPlace.listings(TOKEN_ID);
+      expect(listing.buyer).to.equal(addr2.address);
+      expect(listing.buyerDeposit).to.equal(nextListingPrice + 1);
+    });
+
+    it("allows the user to withdraw their bid for the listing", async () => {
+      await marketPlace.connect(addr2).bid(TOKEN_ID, {
+        value: nextListingPrice,
+      });
+
+      await expect(marketPlace.connect(addr2).withdrawBid(TOKEN_ID)).not.to.be
+        .reverted;
+
+      const listing = await marketPlace.listings(TOKEN_ID);
+      expect(listing.buyer).to.equal(ZERO_ADDRESS);
+      expect(listing.buyerDeposit).to.equal(0);
+    });
+
+    it("accepts the right amount of eth from the buyer", async () => {
+      const prevBalance = await addr2.getBalance();
+
+      const bidTxn = await marketPlace.connect(addr2).bid(TOKEN_ID, {
+        value: nextListingPrice,
+      });
+
+      const bidTxnReceipt = await bidTxn.wait();
+      const gasUnitsUsed = bidTxnReceipt.gasUsed;
+      const gasPrice = bidTxnReceipt.effectiveGasPrice;
+      const gasCost = gasUnitsUsed.mul(gasPrice);
+
+      const nextBalance = await addr2.getBalance();
+
+      const diff = prevBalance.sub(nextBalance);
+
+      expect(diff).to.be.equal(gasCost.add(nextListingPrice));
+    });
+
+    it("returns the right amount of eth to the buyer if listing is withdrawn before acceptance", async () => {
+      await marketPlace.connect(addr2).bid(TOKEN_ID, {
+        value: nextListingPrice,
+      });
+
+      const prevBalance = await addr2.getBalance();
+
+      await marketPlace.connect(addr1).withdrawListing(TOKEN_ID);
+
+      const nextBalance = await addr2.getBalance();
+
+      const diff = nextBalance.sub(prevBalance);
+
+      expect(diff).to.be.equal(nextListingPrice);
+    });
+
+    it("emits a BuyerDeposited event upon withdrawal of the listing", async () => {
+      await expect(
+        marketPlace.connect(addr2).bid(TOKEN_ID, {
+          value: nextListingPrice,
+        })
+      )
+        .to.emit(marketPlace, "BuyerDeposited")
+        .withArgs(TOKEN_ID, addr2.address, nextListingPrice);
+    });
+
+    it("reverts if user bid is less than offering price", async () => {
+      await expect(
+        marketPlace.connect(addr2).bid(TOKEN_ID, {
+          value: nextListingPrice - 1,
+        })
+      ).to.be.revertedWith("Insufficient value");
+    });
+
+    it("reverts if NFT is not for sale", async () => {
+      await expect(
+        marketPlace.connect(addr2).bid(TOKEN_ID + 1, {
+          value: nextListingPrice,
+        })
+      ).to.be.revertedWith("This NFT is not for sale");
+    });
+
+    it("reverts if a bid has already been made", async () => {
+      await marketPlace.connect(addr3).bid(TOKEN_ID, {
+        value: nextListingPrice,
+      });
+
+      await expect(
+        marketPlace.connect(addr2).bid(TOKEN_ID, {
+          value: nextListingPrice,
+        })
+      ).to.be.revertedWith("An offer has already been made for this listing");
+    });
+  });
 });

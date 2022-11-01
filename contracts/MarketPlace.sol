@@ -23,12 +23,7 @@ contract MarketPlace is Ownable, ReentrancyGuard {
     event ListingMade(address seller, uint256 tokenId, uint256 listingPrice);
     event ListingWithdrawn(address seller, uint256 tokenId);
     event Approved(uint256 tokenId, bool shopAproval);
-    event BuyerDeposited(
-        uint256 tokenId,
-        address buyer,
-        uint256 amount,
-        uint256 depositAmount
-    );
+    event BuyerDeposited(uint256 tokenId, address buyer, uint256 depositAmount);
     event BuyerWithdrawn(uint256 tokenId, uint256 amount);
 
     constructor(address _NFTContract, uint256 _commission) payable {
@@ -60,10 +55,11 @@ contract MarketPlace is Ownable, ReentrancyGuard {
         uint256 refundAmount = listings[tokenId].buyerDeposit;
 
         if (refundAmount > 0) {
+            address buyer = listings[tokenId].buyer;
             listings[tokenId].buyer = address(0);
             listings[tokenId].buyerDeposit = 0;
 
-            (bool success, ) = (msg.sender).call{value: refundAmount}("");
+            (bool success, ) = (buyer).call{value: refundAmount}("");
             require(success, "Failed to refund bidder");
         }
 
@@ -76,7 +72,7 @@ contract MarketPlace is Ownable, ReentrancyGuard {
             "This NFT is not for sale"
         );
         require(
-            listings[tokenId].buyer != address(0),
+            listings[tokenId].buyer == address(0),
             "An offer has already been made for this listing"
         );
 
@@ -84,9 +80,9 @@ contract MarketPlace is Ownable, ReentrancyGuard {
         require(msg.value >= targetPrice, "Insufficient value");
 
         listings[tokenId].buyer = msg.sender;
-        listings[tokenId].listingPrice = msg.value;
+        listings[tokenId].buyerDeposit = msg.value;
 
-        emit BuyerDeposited(tokenId, msg.sender, tokenId, msg.value);
+        emit BuyerDeposited(tokenId, msg.sender, msg.value);
     }
 
     function withdrawBid(uint256 tokenId) public nonReentrant {
