@@ -129,7 +129,7 @@ contract MarketPlace is Ownable, ReentrancyGuard {
     }
 
     function withdrawAdminPool(uint256 amount) public onlyOwner {
-        (bool success, ) = (address(this)).call{value: amount}("");
+        (bool success, ) = (msg.sender).call{value: amount}("");
         require(success, "Failed to send commission to contract owner");
         adminPool -= amount;
     }

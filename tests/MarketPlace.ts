@@ -392,4 +392,82 @@ describe("MarketPlace", () => {
       ).to.be.revertedWith("An offer has not been made");
     });
   });
+
+  describe("Withdrawing from AdminPool", async () => {
+    beforeEach(async () => {
+      await thunderDomeNFT
+        .connect(addr1)
+        .approve(marketPlace.address, TOKEN_ID);
+
+      await marketPlace.connect(addr1).makeListing(TOKEN_ID, nextListingPrice);
+
+      await marketPlace.connect(addr2).bid(TOKEN_ID, {
+        value: nextListingPrice,
+      });
+
+      await marketPlace.connect(addr1).acceptOffer(TOKEN_ID);
+    });
+
+    it("allows withdrawal by the owner", async () => {
+      await expect(marketPlace.withdrawAdminPool(COMMISSION)).to.not.be
+        .reverted;
+    });
+
+    it("allows withdrawal even if amount is less than what is available", async () => {
+      await expect(marketPlace.withdrawAdminPool(WITHDRAWN_AMOUNT)).to.not.be
+        .reverted;
+    });
+
+    it("sends the correct amount of eth to the owner", async () => {
+      const prevBalance = await owner.getBalance();
+
+      const withdrawalTxn = await marketPlace.withdrawAdminPool(
+        WITHDRAWN_AMOUNT
+      );
+
+      const withdrawalTxnReceipt = await withdrawalTxn.wait();
+
+      const gasUnitsUsed = withdrawalTxnReceipt.gasUsed;
+      const gasPrice = withdrawalTxnReceipt.effectiveGasPrice;
+      const gasCost = gasUnitsUsed.mul(gasPrice);
+
+      const nextBalance = await owner.getBalance();
+
+      expect(nextBalance).to.be.equal(
+        prevBalance.add(WITHDRAWN_AMOUNT).sub(gasCost)
+      );
+    });
+
+    it("removes the right amount of eth from the contract", async () => {
+      const prevBalance = await ethers.provider.getBalance(marketPlace.address);
+
+      await marketPlace.withdrawAdminPool(WITHDRAWN_AMOUNT);
+
+      const nextBalance = await ethers.provider.getBalance(marketPlace.address);
+
+      expect(nextBalance).to.equal(prevBalance.sub(WITHDRAWN_AMOUNT));
+    });
+
+    it("updates the adminPool accordingly", async () => {
+      const prevAdminPool = await marketPlace.adminPool();
+
+      await marketPlace.withdrawAdminPool(WITHDRAWN_AMOUNT);
+
+      const nextAdminPool = await marketPlace.adminPool();
+
+      expect(nextAdminPool).to.equal(prevAdminPool.sub(WITHDRAWN_AMOUNT));
+    });
+
+    it("does not allow withdrawal by addresses other than the owner", async () => {
+      await expect(
+        marketPlace.connect(addr1).withdrawAdminPool(COMMISSION)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("does not allow withdrawal if amount is more than what is available", async () => {
+      await expect(
+        marketPlace.withdrawAdminPool(COMMISSION + 1)
+      ).to.be.revertedWith("Failed to send commission to contract owner");
+    });
+  });
 });
