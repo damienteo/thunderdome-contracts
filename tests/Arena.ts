@@ -16,156 +16,179 @@ describe("Arena", () => {
     owner: SignerWithAddress,
     addr1: SignerWithAddress,
     addr2: SignerWithAddress,
-    eGameTrackerContract: Arena,
-    eGameContract: ExperiencePoints;
+    arenaContract: Arena,
+    experiencePointsContract: ExperiencePoints;
 
   beforeEach(async () => {
     const ExperiencePointsFactory = await ethers.getContractFactory(
       "ExperiencePoints"
     );
-    eGameContract = await ExperiencePointsFactory.deploy();
+    experiencePointsContract = await ExperiencePointsFactory.deploy();
 
     Arena = await ethers.getContractFactory("Arena");
 
     [owner, addr1, addr2] = await ethers.getSigners();
     to = addr1.address;
-    eGameTrackerContract = await Arena.deploy(eGameContract.address);
+    arenaContract = await Arena.deploy(experiencePointsContract.address);
 
-    await eGameContract.grantRole(MINTER_ROLE, eGameTrackerContract.address);
+    await experiencePointsContract.grantRole(
+      MINTER_ROLE,
+      arenaContract.address
+    );
   });
 
   it("Checks Signature", async function () {
-    const hash = await eGameTrackerContract.getMessageHash(to, amount);
+    const hash = await arenaContract.getMessageHash(to, amount);
 
     const sig = await owner.signMessage(ethers.utils.arrayify(hash));
 
-    expect(await eGameTrackerContract.verify(to, amount, sig)).to.equal(true);
+    expect(await arenaContract.verify(to, amount, sig)).to.equal(true);
   });
 
   it("Rejects verification with incorrect amount", async function () {
-    const hash = await eGameTrackerContract.getMessageHash(to, amount);
+    const hash = await arenaContract.getMessageHash(to, amount);
 
     const sig = await owner.signMessage(ethers.utils.arrayify(hash));
 
-    expect(await eGameTrackerContract.verify(to, amount + 1, sig)).to.equal(
-      false
-    );
+    expect(await arenaContract.verify(to, amount + 1, sig)).to.equal(false);
   });
 
   it("Rejects external wallets generating signatures to give amounts to themselves", async function () {
-    const hash = await eGameTrackerContract.getMessageHash(to, amount);
+    const hash = await arenaContract.getMessageHash(to, amount);
 
     const sig = await addr1.signMessage(ethers.utils.arrayify(hash));
 
-    expect(await eGameTrackerContract.verify(to, amount, sig)).to.equal(false);
+    expect(await arenaContract.verify(to, amount, sig)).to.equal(false);
   });
 
   it("Rejects external wallets generating signatures to give amounts to others", async function () {
-    const hash = await eGameTrackerContract.getMessageHash(
-      addr2.address,
-      amount
-    );
+    const hash = await arenaContract.getMessageHash(addr2.address, amount);
 
     const sig = await addr1.signMessage(ethers.utils.arrayify(hash));
 
     // correct signature and message returns true
 
-    expect(await eGameTrackerContract.verify(to, amount, sig)).to.equal(false);
+    expect(await arenaContract.verify(to, amount, sig)).to.equal(false);
   });
 
   it("Logs UserScores", async () => {
-    await expect(eGameTrackerContract.gameScores(to, 0)).to.be.reverted;
+    await arenaContract.logGameScore(addr1.address, NEXT_SCORE);
 
-    await eGameTrackerContract.logGameScore(addr1.address, NEXT_SCORE);
+    expect(await arenaContract.gameScores(to)).to.equal(NEXT_SCORE);
 
-    expect(await eGameTrackerContract.gameScores(to, 0)).to.equal(NEXT_SCORE);
+    await arenaContract.logGameScore(addr1.address, NEXT_SCORE);
+
+    expect(await arenaContract.gameScores(to)).to.equal(NEXT_SCORE * 2);
+
+    await arenaContract.logGameScore(addr1.address, 1);
+
+    expect(await arenaContract.gameScores(to)).to.equal(NEXT_SCORE * 2 + 1);
   });
 
   it("Allows claiming of Prize", async () => {
-    await eGameTrackerContract.logGameScore(to, NEXT_SCORE);
+    await arenaContract.logGameScore(to, NEXT_SCORE);
 
-    const hash = await eGameTrackerContract.getMessageHash(to, NEXT_SCORE);
+    const hash = await arenaContract.getMessageHash(to, NEXT_SCORE);
 
     const sig = await owner.signMessage(ethers.utils.arrayify(hash));
 
-    await expect(eGameTrackerContract.claimPrize(to, NEXT_SCORE, sig)).to.not.be
+    await expect(arenaContract.claimPrize(to, NEXT_SCORE, sig)).to.not.be
       .reverted;
   });
 
   it("Prevents claiming of prize by invalid signature", async () => {
-    await eGameTrackerContract.logGameScore(to, NEXT_SCORE);
+    await arenaContract.logGameScore(to, NEXT_SCORE);
 
-    const hash = await eGameTrackerContract.getMessageHash(to, NEXT_SCORE);
+    const hash = await arenaContract.getMessageHash(to, NEXT_SCORE);
 
     const sig = await addr1.signMessage(ethers.utils.arrayify(hash));
 
     await expect(
-      eGameTrackerContract.claimPrize(to, NEXT_SCORE, sig)
+      arenaContract.claimPrize(to, NEXT_SCORE, sig)
     ).to.be.revertedWith("Invalid Signature");
   });
 
   it("Prevents claiming of wrong prize amount", async () => {
-    await eGameTrackerContract.logGameScore(to, NEXT_SCORE);
+    await arenaContract.logGameScore(to, NEXT_SCORE);
 
-    const hash = await eGameTrackerContract.getMessageHash(to, NEXT_SCORE);
+    const hash = await arenaContract.getMessageHash(to, NEXT_SCORE);
 
     const sig = await owner.signMessage(ethers.utils.arrayify(hash));
 
     await expect(
-      eGameTrackerContract.claimPrize(to, NEXT_SCORE + 1, sig)
+      arenaContract.claimPrize(to, NEXT_SCORE + 1, sig)
     ).to.be.revertedWith("Invalid Signature");
   });
 
   it("Prevents claiming of prize amount for value not in first game score", async () => {
-    await eGameTrackerContract.logGameScore(to, NEXT_SCORE);
+    await arenaContract.logGameScore(to, NEXT_SCORE);
 
     const wrongScore = NEXT_SCORE + 1;
 
-    const hash = await eGameTrackerContract.getMessageHash(to, wrongScore);
+    const hash = await arenaContract.getMessageHash(to, wrongScore);
 
     const sig = await owner.signMessage(ethers.utils.arrayify(hash));
 
     await expect(
-      eGameTrackerContract.claimPrize(to, wrongScore, sig)
-    ).to.be.revertedWith("Score does not match");
+      arenaContract.claimPrize(to, wrongScore, sig)
+    ).to.be.revertedWith("Insufficient Claimable Points");
   });
 
   it("Prevents claiming when there is no game score logged", async () => {
-    const hash = await eGameTrackerContract.getMessageHash(to, NEXT_SCORE);
+    const hash = await arenaContract.getMessageHash(to, NEXT_SCORE);
 
     const sig = await owner.signMessage(ethers.utils.arrayify(hash));
 
-    await expect(eGameTrackerContract.claimPrize(to, NEXT_SCORE, sig)).to.be
-      .reverted;
+    await expect(
+      arenaContract.claimPrize(to, NEXT_SCORE, sig)
+    ).to.be.revertedWith("Insufficient Claimable Points");
   });
 
   it("Prevents claiming when already previously claimed", async () => {
-    await eGameTrackerContract.logGameScore(to, NEXT_SCORE);
+    await arenaContract.logGameScore(to, NEXT_SCORE);
 
-    const hash = await eGameTrackerContract.getMessageHash(to, NEXT_SCORE);
+    const hash = await arenaContract.getMessageHash(to, NEXT_SCORE);
 
     const sig = await owner.signMessage(ethers.utils.arrayify(hash));
 
-    await expect(eGameTrackerContract.claimPrize(to, NEXT_SCORE, sig)).to.not.be
+    await expect(arenaContract.claimPrize(to, NEXT_SCORE, sig)).to.not.be
       .reverted;
 
     await expect(
-      eGameTrackerContract.claimPrize(to, NEXT_SCORE, sig)
-    ).to.be.revertedWith("Already Claimed");
+      arenaContract.claimPrize(to, NEXT_SCORE, sig)
+    ).to.be.revertedWith("Insufficient Claimable Points");
   });
 
   it("Mints ExperiencePoints tokens upon claiming", async () => {
-    expect(await eGameContract.balanceOf(to)).to.equal(0);
+    expect(await experiencePointsContract.balanceOf(to)).to.equal(0);
 
-    await eGameTrackerContract.logGameScore(to, NEXT_SCORE);
+    await arenaContract.logGameScore(to, NEXT_SCORE);
 
-    const hash = await eGameTrackerContract.getMessageHash(to, NEXT_SCORE);
+    const hash = await arenaContract.getMessageHash(to, NEXT_SCORE);
 
     const sig = await owner.signMessage(ethers.utils.arrayify(hash));
 
-    await expect(eGameTrackerContract.claimPrize(to, NEXT_SCORE, sig)).to.not.be
+    await expect(arenaContract.claimPrize(to, NEXT_SCORE, sig)).to.not.be
       .reverted;
 
-    expect(await eGameContract.balanceOf(to)).to.equal(NEXT_SCORE);
+    expect(await experiencePointsContract.balanceOf(to)).to.equal(NEXT_SCORE);
+  });
+
+  it("Allows claiming in batches", async () => {
+    await arenaContract.logGameScore(to, 2 * NEXT_SCORE);
+
+    const hash = await arenaContract.getMessageHash(to, NEXT_SCORE);
+
+    const sig = await owner.signMessage(ethers.utils.arrayify(hash));
+
+    await expect(arenaContract.claimPrize(to, NEXT_SCORE, sig)).to.not.be
+      .reverted;
+
+    await expect(arenaContract.claimPrize(to, NEXT_SCORE, sig)).to.not.be
+      .reverted;
+
+    expect(await experiencePointsContract.balanceOf(to)).to.equal(
+      2 * NEXT_SCORE
+    );
   });
 });

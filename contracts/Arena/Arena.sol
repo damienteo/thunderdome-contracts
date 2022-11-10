@@ -8,23 +8,15 @@ import "./ExperiencePoints.sol";
 contract Arena is Ownable {
     ExperiencePoints public experiencePoints;
 
-    mapping(address => uint256[]) public gameScores;
-    mapping(address => bool) public userClaimed;
+    mapping(address => uint256) public gameScores;
+    mapping(address => uint256) public userClaimed;
 
     constructor(ExperiencePoints _experiencePoints) {
         experiencePoints = _experiencePoints;
     }
 
     function logGameScore(address _gamer, uint256 _score) public onlyOwner {
-        gameScores[_gamer].push(_score);
-    }
-
-    function getGameScoreCount(address _address)
-        public
-        view
-        returns (uint256 count)
-    {
-        return gameScores[_address].length;
+        gameScores[_gamer] += _score;
     }
 
     function claimPrize(
@@ -33,10 +25,12 @@ contract Arena is Ownable {
         bytes memory signature
     ) public {
         require(verify(_to, _amount, signature) == true, "Invalid Signature");
-        require(userClaimed[_to] == false, "Already Claimed"); // Prevent double-claim
-        require(gameScores[_to][0] == _amount, "Score does not match"); // User can claim N of tokens only if they score N in first game play
+        require(
+            gameScores[_to] - userClaimed[_to] >= _amount,
+            "Insufficient Claimable Points"
+        ); // Prevent double-claim
 
-        userClaimed[_to] = true; // Checks Effects Interactions => Reduce attack surface for malicious contracts
+        userClaimed[_to] += _amount; // Checks Effects Interactions => Reduce attack surface for malicious contracts
         experiencePoints.mint(_to, _amount);
     }
 
