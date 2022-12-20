@@ -1,7 +1,7 @@
 {
   "name": "thunderdome-contracts",
   "scripts": {
-    "test": "npx hardhat test",
+    "test": "npx hardhat test --network hardhat",
     "testParallel": "npx hardhat test --parallel",
     "coverage": "npx hardhat coverage",
     "reportGas": "REPORT_GAS=true npx hardhat test"
